@@ -1,5 +1,5 @@
-# Vercel deployment configuration for frontend
 {
+  "version": 2,
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install --prefix frontend",
@@ -17,5 +17,17 @@
       "memory": 1024,
       "maxDuration": 60
     }
-  }
+  },
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/$1"
+    }
+  ]
 }
