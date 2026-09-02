@@ -9,7 +9,7 @@
     "build": "tsc && esbuild src/server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "lint": "tsc --noEmit",
-    "db:push": "drizzle-kit up:pg",
+    "db:push": "drizzle-kit up",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
