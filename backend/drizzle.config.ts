@@ -29,11 +29,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    host: sqlHost,
-    port: 5432,
-    user,
-    password,
-    database: sqlDbName,
-    ssl: true,
+  connectionString: process.env.DATABASE_URL
   },
 });
