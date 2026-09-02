@@ -17,7 +17,7 @@
     "@types/pg": "^8.23.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "drizzle-kit": "^0.18.1",
+    "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
     "firebase-admin": "^10.3.0",
