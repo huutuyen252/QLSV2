@@ -27,6 +27,23 @@ export default function App() {
   const [adminSubTab, setAdminSubTab] = useState<string>('admin-overview');
   const [activeSemester, setActiveSemester] = useState<string>(() => getAcademicPeriod().code);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('app_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('app_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Core Database States
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
@@ -585,6 +602,8 @@ export default function App() {
               currentView={currentView}
               onSelectView={setCurrentView}
               userRole={currentUser?.role}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={toggleSidebar}
             />
 
             <main className="flex-1 p-4 md:p-6 lg:p-8 min-w-0">
