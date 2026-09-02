@@ -22,28 +22,55 @@ import { AdminAuditLogsModule } from './components/admin/AdminAuditLogsModule';
 import { getAcademicPeriod } from './utils/academicCalendar';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<string>('dashboard');
-  const [adminSubTab, setAdminSubTab] = useState<string>('admin-overview');
-  const [activeSemester, setActiveSemester] = useState<string>(() => getAcademicPeriod().code);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+  // Restore current user and last active timestamp (10 min timeout)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
-      return localStorage.getItem('app_sidebar_collapsed') === 'true';
+      const savedUserStr = localStorage.getItem('app_current_user');
+      const savedActivityStr = localStorage.getItem('app_last_activity_time');
+      if (savedUserStr && savedActivityStr) {
+        const lastActivity = parseInt(savedActivityStr, 10);
+        const now = Date.now();
+        const TEN_MINUTES_MS = 10 * 60 * 1000;
+        // If inactive for more than 10 minutes, expire session
+        if (now - lastActivity > TEN_MINUTES_MS) {
+          localStorage.removeItem('app_current_user');
+          localStorage.removeItem('app_last_activity_time');
+          return null;
+        }
+        // Valid session, refresh activity timestamp
+        localStorage.setItem('app_last_activity_time', String(now));
+        return JSON.parse(savedUserStr);
+      } else if (savedUserStr) {
+        localStorage.setItem('app_last_activity_time', String(Date.now()));
+        return JSON.parse(savedUserStr);
+      }
     } catch {
-      return false;
+      // ignore JSON parse errors
+    }
+    return null;
+  });
+
+  // Restore current view on F5 / reload
+  const [currentView, setCurrentView] = useState<string>(() => {
+    try {
+      const savedView = localStorage.getItem('app_current_view');
+      return savedView || 'dashboard';
+    } catch {
+      return 'dashboard';
     }
   });
 
-  const toggleSidebar = () => {
-    setIsSidebarCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('app_sidebar_collapsed', String(next));
-      } catch {}
-      return next;
-    });
-  };
+  // Restore admin sub-tab on F5 / reload
+  const [adminSubTab, setAdminSubTab] = useState<string>(() => {
+    try {
+      const savedAdminTab = localStorage.getItem('app_admin_subtab');
+      return savedAdminTab || 'admin-overview';
+    } catch {
+      return 'admin-overview';
+    }
+  });
+  const [activeSemester, setActiveSemester] = useState<string>(() => getAcademicPeriod().code);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
 
   // Core Database States
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
@@ -63,12 +90,71 @@ export default function App() {
     loadAllData();
   }, []);
 
+  // Persist Current User
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('app_current_user', JSON.stringify(currentUser));
+      localStorage.setItem('app_last_activity_time', String(Date.now()));
     } else {
       localStorage.removeItem('app_current_user');
+      localStorage.removeItem('app_last_activity_time');
     }
+  }, [currentUser]);
+
+  // Persist Current View & Admin Tab on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_current_view', currentView);
+    } catch {
+      // ignore
+    }
+  }, [currentView]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_admin_subtab', adminSubTab);
+    } catch {
+      // ignore
+    }
+  }, [adminSubTab]);
+
+  // 10-Minute Inactivity Auto-Logout Tracker
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+    const updateActivity = () => {
+      localStorage.setItem('app_last_activity_time', String(Date.now()));
+    };
+
+    // User interaction events to reset the inactivity timer
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach((ev) => {
+      window.addEventListener(ev, updateActivity, { passive: true });
+    });
+
+    // Check every 10 seconds if 10 minutes of inactivity has passed
+    const intervalId = setInterval(() => {
+      const savedActivityStr = localStorage.getItem('app_last_activity_time');
+      if (savedActivityStr) {
+        const lastActivity = parseInt(savedActivityStr, 10);
+        const diff = Date.now() - lastActivity;
+        if (diff >= TEN_MINUTES_MS) {
+          setCurrentUser(null);
+          localStorage.removeItem('app_current_user');
+          localStorage.removeItem('app_last_activity_time');
+          showToast('Phiên làm việc đã hết hạn sau 10 phút không thao tác. Vui lòng đăng nhập lại.');
+        }
+      }
+    }, 10000);
+
+    return () => {
+      activityEvents.forEach((ev) => {
+        window.removeEventListener(ev, updateActivity);
+      });
+      clearInterval(intervalId);
+    };
   }, [currentUser]);
 
   const showToast = (msg: string) => {
@@ -602,8 +688,6 @@ export default function App() {
               currentView={currentView}
               onSelectView={setCurrentView}
               userRole={currentUser?.role}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={toggleSidebar}
             />
 
             <main className="flex-1 p-4 md:p-6 lg:p-8 min-w-0">
