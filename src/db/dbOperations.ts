@@ -1,4 +1,9 @@
-import { db } from './index.ts';
+import * as dbModule from './index.ts';
+
+// Support the database export name used by the current database module while
+// keeping this operations layer compatible with older builds.
+const db = (dbModule as any).db ?? (dbModule as any).database;
+const pool = (dbModule as any).pool;
 import {
   users,
   sinhVien,
@@ -32,6 +37,227 @@ let memoryDiemDanh: any[] = [];
 let memoryThongBaoKiemTra: any[] = [];
 let memoryNghiLe: any[] = [];
 
+export async function ensureDatabaseSchema() {
+  if (!pool) return;
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "users" (
+          "id" text PRIMARY KEY NOT NULL,
+          "username" text NOT NULL UNIQUE,
+          "full_name" text NOT NULL,
+          "role" text NOT NULL,
+          "email" text NOT NULL,
+          "password" text,
+          "avatar" text,
+          "student_code" text,
+          "faculty" text,
+          "status" text DEFAULT 'ACTIVE',
+          "permissions" jsonb,
+          "created_at" text
+        );
+
+        CREATE TABLE IF NOT EXISTS "sinh_vien" (
+          "ma_sv" text PRIMARY KEY NOT NULL,
+          "ho_ten" text NOT NULL,
+          "avatar" text,
+          "ngay_sinh" text NOT NULL,
+          "gioi_tinh" text NOT NULL,
+          "lop" text NOT NULL,
+          "khoa" text NOT NULL,
+          "so_dien_thoai" text NOT NULL,
+          "email" text NOT NULL,
+          "dia_chi" text NOT NULL,
+          "ho_so_file" text,
+          "ho_so_file_name" text,
+          "ho_so_files" jsonb,
+          "ngay_nhap_hoc" text NOT NULL,
+          "trang_thai" text NOT NULL DEFAULT 'Đang học'
+        );
+
+        CREATE TABLE IF NOT EXISTS "mon_hoc" (
+          "ma_mh" text PRIMARY KEY NOT NULL,
+          "ten_mh" text NOT NULL,
+          "so_tin_chi" integer NOT NULL,
+          "khoa_phu_trach" text,
+          "khoa" text,
+          "loai_mon" text,
+          "hoc_ky" text,
+          "nam_hoc" text,
+          "lop" text,
+          "le_phi_thi_lai" integer,
+          "le_phi_hoc_lai" integer
+        );
+
+        CREATE TABLE IF NOT EXISTS "diem" (
+          "id" text PRIMARY KEY NOT NULL,
+          "ma_sv" text NOT NULL,
+          "ho_ten_sv" text,
+          "ma_mh" text NOT NULL,
+          "ten_mh" text,
+          "so_tin_chi" integer,
+          "hoc_ky" text NOT NULL,
+          "nam_hoc" text NOT NULL,
+          "diem_chuyen_can" double precision NOT NULL DEFAULT 0,
+          "diem_giua_ky" double precision NOT NULL DEFAULT 0,
+          "diem_cuoi_ky" double precision NOT NULL DEFAULT 0,
+          "diem_tong_ket_10" double precision NOT NULL DEFAULT 0,
+          "diem_thang_4" double precision NOT NULL DEFAULT 0,
+          "diem_chu" text NOT NULL DEFAULT 'F',
+          "trang_thai" text NOT NULL DEFAULT 'FAILED'
+        );
+
+        CREATE TABLE IF NOT EXISTS "ren_luyen" (
+          "id" text PRIMARY KEY NOT NULL,
+          "ma_sv" text NOT NULL,
+          "ho_ten_sv" text,
+          "lop" text,
+          "thang" integer NOT NULL,
+          "nam" integer NOT NULL,
+          "diem_rl" integer NOT NULL DEFAULT 0,
+          "xep_loai" text NOT NULL,
+          "nhan_xet" text,
+          "nguoi_danh_gia" text,
+          "ngay_danh_gia" text,
+          "diem_muc_1" integer,
+          "diem_muc_2" integer,
+          "diem_muc_3" integer,
+          "hoc_ky" text
+        );
+
+        CREATE TABLE IF NOT EXISTS "thoi_khoa_bieu" (
+          "id" text PRIMARY KEY NOT NULL,
+          "tkb_id" text,
+          "ma_sv" text NOT NULL,
+          "lop" text,
+          "lop_id" text,
+          "hoc_ky" text NOT NULL,
+          "hoc_ky_id" text,
+          "nam_hoc" text NOT NULL,
+          "nam_hoc_id" text,
+          "tuan_tu" integer DEFAULT 1,
+          "tuan_den" integer DEFAULT 15,
+          "tuan" integer DEFAULT 1,
+          "danh_sach_tuan" jsonb,
+          "ma_mh" text NOT NULL,
+          "ten_mh" text NOT NULL,
+          "so_tin_chi" integer NOT NULL DEFAULT 0,
+          "giang_vien" text,
+          "phong_hoc" text,
+          "lich_hoc" jsonb NOT NULL,
+          "thong_bao_kiem_tra" jsonb
+        );
+
+        CREATE TABLE IF NOT EXISTS "thi_lai_hoc_lai" (
+          "id" text PRIMARY KEY NOT NULL,
+          "ma_sv" text NOT NULL,
+          "ho_ten_sv" text,
+          "ma_mh" text NOT NULL,
+          "ten_mh" text NOT NULL,
+          "so_tin_chi" integer NOT NULL,
+          "loai_dang_ky" text NOT NULL,
+          "lan_thi" integer NOT NULL DEFAULT 1,
+          "hoc_ky" text NOT NULL,
+          "nam_hoc" text NOT NULL,
+          "phi_diem" integer NOT NULL DEFAULT 0,
+          "trang_thai" text NOT NULL DEFAULT 'CHO_DUYET',
+          "ket_qua" text DEFAULT 'CHUA_CO_DIEM',
+          "ngay_dang_ky" text NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS "nam_hoc" (
+          "nam_hoc_id" text PRIMARY KEY NOT NULL,
+          "ten_nam_hoc" text NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS "hoc_ky" (
+          "hoc_ky_id" text PRIMARY KEY NOT NULL,
+          "ten_hoc_ky" text NOT NULL,
+          "nam_hoc_id" text NOT NULL,
+          "ngay_bat_dau" text,
+          "ngay_ket_thuc" text
+        );
+
+        CREATE TABLE IF NOT EXISTS "lop" (
+          "lop_id" text PRIMARY KEY NOT NULL,
+          "ten_lop" text NOT NULL,
+          "khoa" text NOT NULL,
+          "nam_nhap_hoc" integer NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS "diem_danh" (
+          "id" text PRIMARY KEY NOT NULL,
+          "ma_sv" text NOT NULL,
+          "ho_ten_sv" text,
+          "ma_mh" text NOT NULL,
+          "ten_mh" text,
+          "lop" text,
+          "ngay" text NOT NULL,
+          "so_tiet_nghi" integer NOT NULL DEFAULT 0,
+          "co_phep" boolean NOT NULL DEFAULT false,
+          "ghi_chu" text,
+          "nguoi_diem_danh" text,
+          "created_at" text
+        );
+
+        CREATE TABLE IF NOT EXISTS "thong_bao_kiem_tra" (
+          "id" text PRIMARY KEY NOT NULL,
+          "ma_mh" text NOT NULL,
+          "ten_mh" text,
+          "loai" text NOT NULL,
+          "tieu_de" text NOT NULL,
+          "noi_dung" text NOT NULL,
+          "ngay_kiem_tra" text,
+          "tuan_kiem_tra" integer,
+          "giang_vien_tao" text,
+          "created_at" text
+        );
+
+        CREATE TABLE IF NOT EXISTS "nghi_le" (
+          "id" text PRIMARY KEY NOT NULL,
+          "dip_le" text NOT NULL,
+          "tu_ngay" text NOT NULL,
+          "den_ngay" text NOT NULL,
+          "ghi_chu" text,
+          "lop" text,
+          "hoc_ky" text,
+          "nam_hoc" text,
+          "created_at" text
+        );
+
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "permissions" jsonb;
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "avatar" text;
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "student_code" text;
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "faculty" text;
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "status" text DEFAULT 'ACTIVE';
+        ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "created_at" text;
+
+        ALTER TABLE "sinh_vien" ADD COLUMN IF NOT EXISTS "ho_so_file" text;
+        ALTER TABLE "sinh_vien" ADD COLUMN IF NOT EXISTS "ho_so_file_name" text;
+        ALTER TABLE "sinh_vien" ADD COLUMN IF NOT EXISTS "ho_so_files" jsonb;
+
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "tkb_id" text;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "lop_id" text;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "hoc_ky_id" text;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "nam_hoc_id" text;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "tuan_tu" integer DEFAULT 1;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "tuan_den" integer DEFAULT 15;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "tuan" integer DEFAULT 1;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "danh_sach_tuan" jsonb;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "giang_vien" text;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "phong_hoc" text;
+        ALTER TABLE "thoi_khoa_bieu" ADD COLUMN IF NOT EXISTS "thong_bao_kiem_tra" jsonb;
+      `);
+      console.log('[DB] PostgreSQL schema checked & initialized successfully.');
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    console.warn('[DB] Auto-migration check:', err?.message);
+  }
+}
+
 export async function seedInitialDataIfNeeded() {
   if (!db) {
     if (memoryUsers.length === 0) {
@@ -40,6 +266,7 @@ export async function seedInitialDataIfNeeded() {
     return;
   }
   try {
+    await ensureDatabaseSchema();
     const existingUsers = await db.select().from(users).limit(1);
     if (existingUsers.length === 0) {
       console.log('Seeding initial system users to PostgreSQL...');

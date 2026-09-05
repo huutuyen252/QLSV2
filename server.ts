@@ -598,7 +598,7 @@ async function startServer() {
       let totalWeighted10 = 0;
       let totalWeighted4 = 0;
       let failedCourses = 0;
-      studentGrades.forEach(g => {
+      studentGrades.forEach((g: Diem) => {
         const tc = g.soTinChi || 3;
         totalCredits += tc;
         totalWeighted10 += g.diemTongKet10 * tc;
@@ -844,7 +844,7 @@ async function startServer() {
       let list = await getAllThoiKhoaBieu(maSV as string, lop as string, hocKy as string, namHoc as string);
       if (week) {
         const wNum = Number(week);
-        list = list.filter(t => (t.tuanTu && t.tuanDen ? wNum >= t.tuanTu && wNum <= t.tuanDen : true) || ((t.danhSachTuan as number[]) && (t.danhSachTuan as number[]).includes(wNum)));
+        list = list.filter((t: { tuanTu?: number; tuanDen?: number; danhSachTuan?: number[] }) => (t.tuanTu && t.tuanDen ? wNum >= t.tuanTu && wNum <= t.tuanDen : true) || (t.danhSachTuan && t.danhSachTuan.includes(wNum)));
       }
       return res.json({ success: true, data: list });
     } catch (error: any) {
@@ -880,7 +880,7 @@ async function startServer() {
       const targetClass = lop || lopID || 'CNKT Cơ khí 25DDS 09041';
       if (applyToClass && targetClass) {
         const allStudents = await getAllSinhVien(undefined, undefined, targetClass);
-        const studentCodes = allStudents.length > 0 ? allStudents.map((s) => s.maSV) : [maSV || '25DDS0904103'];
+        const studentCodes = allStudents.length > 0 ? allStudents.map((s: any) => s.maSV) : [maSV || '25DDS0904103'];
         for (let idx = 0; idx < studentCodes.length; idx++) {
           const studentCode = studentCodes[idx];
           const idVal = `tkb-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`;
@@ -1293,8 +1293,8 @@ async function startServer() {
       const grades = await getAllDiem(undefined, hocKy as string, namHoc as string);
       const training = await getAllRenLuyen(undefined);
       const totalStudents = students.length;
-      const totalPassedGrades = grades.filter(g => g.trangThai === 'PASSED').length;
-      const totalFailedGrades = grades.filter(g => g.trangThai === 'FAILED').length;
+      const totalPassedGrades = grades.filter((g: Diem) => g.trangThai === 'PASSED').length;
+      const totalFailedGrades = grades.filter((g: Diem) => g.trangThai === 'FAILED').length;
       return res.json({
         success: true,
         data: {

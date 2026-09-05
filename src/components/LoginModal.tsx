@@ -78,7 +78,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Ví dụ: sv2024001, gv01, admin..."
+                placeholder="Ví dụ: 25DDS09021.., gv01, admin..."
                 autoComplete="off"
                 className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 font-medium"
                 required
