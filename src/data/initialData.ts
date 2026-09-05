@@ -6,7 +6,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'u-admin',
     username: 'admin',
-    fullName: 'Trần Thị Bích',
+    fullName: 'Dương Hữu Tuyến',
     role: 'ADMIN',
     email: 'admin@tdnu.edu.vn',
     password: 'admin123',
